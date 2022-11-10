@@ -1,6 +1,7 @@
 import datetime
 import os
 import tempfile
+import subprocess
 
 import flask_restful
 import requests
@@ -13,9 +14,7 @@ from flask import session
 from flask_restful_swagger import swagger
 from werkzeug.utils import secure_filename
 from git import Repo
-from urllib.parse import urlparse
 from os import path
-from pathlib import PurePath
 
 from SpiderKeeper.app import db, agent, app, api
 from SpiderKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
@@ -589,12 +588,6 @@ def job_stop(project_id, job_exec_id):
     agent.cancel_spider(job_execution)
     return redirect(request.referrer, code=302)
 
-def job_log_stream(template_name, **context):
-    app.update_template_context(context)
-    t = app.jinja_env.get_template(template_name)
-    rv = t.stream(context)
-    rv.enable_buffering(5)
-    return rv
 
 @app.route("/project/<project_id>/jobexecs/<job_exec_id>/log")
 def job_log(project_id, job_exec_id):
@@ -602,10 +595,7 @@ def job_log(project_id, job_exec_id):
     res = requests.get(agent.log_url(job_execution))
     res.encoding = 'utf8'
     raw = res.text
-    rows = (line for line in raw.split("\n") if line.strip())
-    return app.response_class(job_log_stream("job_log.html",
-                                             log_lines=rows))
-#    return render_template("job_log.html", log_lines=raw.split('\n'))
+    return render_template("job_log.html", log_lines=raw.split('\n'))
 
 
 @app.route("/project/<project_id>/job/<job_instance_id>/run")
@@ -672,15 +662,15 @@ def spider_git_sync(project_id):
         flash('No URI provided.')
         return redirect(request.referrer)
     git_uri = form['project-git-uri'].strip()
-    tmp_dir = tempfile.gettempdir()
-    Repo.clone_from(git_uri, tmp_dir)
-    # TODO
-    git_root_path = path.join(tmp_dir, PurePath(urlparse(git_uri).path).stem)
-    git_project_name = form['project-git-uri-name']
-    os.chdir(git_root_path)
-    os.system(f"scrapyd-deploy --build-egg output.egg")
-    git_egg_path = path.join(git_root_path, git_project_name, "output.egg")
-    agent.deploy(project, git_egg_path)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        Repo.clone_from(git_uri, tmp_dir)
+        # TODO
+        git_project_name = form['project-git-uri-name']
+        git_project_root = path.join(tmp_dir, git_project_name)
+        p = subprocess.Popen(["scrapyd-deploy", "--build-egg", f"{git_project_name}.egg", "include-dependencies"], cwd=git_project_root)
+        p.wait()
+        git_egg_path = path.join(git_project_root, f"{git_project_name}.egg")
+        agent.deploy(project, git_egg_path)
     flash('sync success!')
     return redirect(request.referrer)
 
