@@ -4,15 +4,14 @@ import tempfile
 import subprocess
 from os import path
 from git import Repo
-from SpiderKeeper.app import agent
-from SpiderKeeper.app.spider.model import Project
+from SpiderKeeperX.app import agent
+from SpiderKeeperX.app.spider.model import Project
 import logging
 
 logger = logging.getLogger("[GIT SYNC]")
 
 def git_sync(project_id, git_uri, git_folder):
     """
-
     git_uri: uri pointing to git repo.
     git_folder: path to spider root relative to git_uri
     """

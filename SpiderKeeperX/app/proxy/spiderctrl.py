@@ -1,9 +1,7 @@
 import datetime
 import random
-from functools import reduce
 
-from SpiderKeeper.app import db
-from SpiderKeeper.app.spider.model import SpiderStatus, JobExecution, JobInstance, Project, JobPriority
+from SpiderKeeperX.app.spider.model import SpiderStatus, JobExecution, JobInstance, Project, JobPriority, session
 
 
 class SpiderServiceProxy(object):
@@ -116,7 +114,7 @@ class SpiderAgent():
                     job_execution.end_time = job_execution_info['end_time']
                     job_execution.running_status = SpiderStatus.FINISHED
             # commit
-            db.session.commit()
+            session.commit()
 
     def start_spider(self, job_instance):
         project = Project.find_project_by_id(job_instance.project_id)
@@ -154,8 +152,8 @@ class SpiderAgent():
             job_execution.job_instance_id = job_instance.id
             job_execution.create_time = datetime.datetime.now()
             job_execution.running_on = leader.server
-            db.session.add(job_execution)
-            db.session.commit()
+            session.add(job_execution)
+            session.commit()
 
     def cancel_spider(self, job_execution):
         job_instance = JobInstance.find_job_instance_by_id(job_execution.job_instance_id)
@@ -165,7 +163,7 @@ class SpiderAgent():
                 if spider_service_instance.cancel_spider(project.project_name, job_execution.service_job_execution_id):
                     job_execution.end_time = datetime.datetime.now()
                     job_execution.running_status = SpiderStatus.CANCELED
-                    db.session.commit()
+                    session.commit()
                 break
 
     def deploy(self, project, file_path):

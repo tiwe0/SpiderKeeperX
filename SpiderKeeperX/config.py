@@ -7,8 +7,9 @@ DEBUG = True
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DB_PATH = os.path.join(os.path.abspath('.'), 'SpiderKeeperX.db')
 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(os.path.abspath('.'), 'SpiderKeeper.db')
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DB_PATH
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
